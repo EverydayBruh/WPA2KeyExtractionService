@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+
+  api:
+    build:
+      context: ./api
+    container_name: api    
+    ports:
+    - "5000:5000"
+    volumes:
+      - ./api:/app
+      - ./uploads:/uploads
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: user
+      RABBITMQ_PASS: password
+    depends_on:
+      - rabbitmq
+
+  queue:
+    build:
+      context: ./queue
+    container_name: queue    
+    volumes:
+      - ./queue:/usr/src/app
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: user
+      RABBITMQ_PASS: password
+    depends_on:
+      - rabbitmq
+
+  service:
+    build:
+      context: ./service
+    container_name: service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: user
+      RABBITMQ_PASS: password
+      # NVIDIA_VISIBLE_DEVICES: all
+      # NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - ./dictionaries:/dictionaries
+      - ./uploads:/uploads
+      - ./service:/usr/src/app
+    depends_on:
+      - rabbitmq
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]

@@ -1,0 +1,66 @@
+# Use the official CUDA base image
+FROM nvidia/cuda:11.8.0-base-ubuntu22.04
+
+# Set non-interactive frontend for apt-get
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Set timezone to avoid interactive prompt
+ENV TZ=Etc/UTC
+
+# Install dependencies, Python 3.9, and Hashcat
+RUN apt-get update && apt-get install -y \
+    tzdata \
+    software-properties-common \
+    && ln -fs /usr/share/zoneinfo/$TZ /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python3.9 \
+    python3.9-venv \
+    python3.9-dev \
+    wget \
+    curl \
+    build-essential \
+    ocl-icd-libopencl1 \
+    opencl-headers \
+    clinfo \
+    cuda-toolkit-11-8 \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установим libnvidia-ml.so.1
+RUN apt-get update && apt-get install -y \
+    libnvidia-compute-510
+
+# Установим необходимые переменные окружения
+ENV PATH /usr/local/cuda-11.8/bin${PATH:+:${PATH}}
+ENV LD_LIBRARY_PATH /usr/local/cuda-11.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# Install Hashcat
+RUN git clone https://github.com/hashcat/hashcat.git /opt/hashcat \
+    && cd /opt/hashcat \
+    && make install \
+    && ln -s /opt/hashcat/hashcat /usr/bin/hashcat
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy the current directory contents into the container at /usr/src/app
+COPY . .
+
+# Install pip
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Add wait-for-it script
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /usr/src/app/wait-for-it.sh
+RUN chmod +x /usr/src/app/wait-for-it.sh
+
+# Проверьте наличие необходимых библиотек
+RUN clinfo
+
+# Run the application
+CMD ["./wait-for-it.sh", "rabbitmq:5672", "--", "python3.9", "./processor.py"]
