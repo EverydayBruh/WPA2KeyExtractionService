@@ -1,3 +1,6 @@
+[Репозиторий мобильного приложения](https://github.com/EverydayBruh/NetworkMonitor/tree/main/app/src/main/java/com/example/networkmonitor)
+
+
 [app.py](api/app.py) - API-сервер Flask:
 1. Обрабатывает HTTP-запросы на загрузку файлов рукопожатий
 2. Проверяет статус обработки рукопожатий
